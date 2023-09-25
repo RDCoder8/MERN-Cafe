@@ -1,19 +1,20 @@
-require('dotenv').config()
-const express = require('express')
-const path = require('path')
-const favicon = require('serve-favicon')
-const logger = require('morgan')
+require('dotenv').config();
+const express = require('express');
+const path = require('path');
+const favicon = require('serve-favicon');
+const logger = require('morgan');
+const ensureLoggedIn = require('./config/ensureLoggedIn.cjs')
 
 // Connect to database
-require("./config/database.cjs")
+require('./config/database.cjs');
 
-const app = express()
+const app = express();
 
-//Middleware
-//Logger middleware to generate logs about requests made to the server
-app.use(logger('dev'))
+// Middleware
+//  logger middleware to log requests
+app.use(logger('dev'));
 // middleware to parse incoming JSON data
-app.use(express.json())
+app.use(express.json());
 
 // Configure both serve-favicon & static middleware
 // to serve from the production 'build' folder
@@ -21,28 +22,32 @@ app.use(express.json())
 app.use(express.static(path.join(__dirname, 'dist')));
 
 // checkToken Middleware. (Sets the req.user & req.exp properties on the request object)
-app.use(require('./config/checkToken.cjs'))
+app.use(require('./config/checkToken.cjs'));
 
+// Put API routes here, before the "catch all" route
+app.get('/api/test', (req, res) => {
+  res.send('You just hit a API route');
+});
 
-////// Put API Routes here, before the "catch all" route
+const userRouter = require('./routes/api/users.cjs');
+//Router setup
+// If the request starts with /api/users/ it directs the request to the userRouter (ln. 28)
+app.use('/api/users', userRouter);
 
-app.get("/test", (req, res) => {
-    res.send("You just hit an API route!")
-})
+//ensureLoggedIn makes all /api/orders routes to be protected by login
+app.use('/api/orders', ensureLoggedIn, require('./routes/api/orders.cjs'));
 
-const userRouter = require('./routes/api/users.cjs')
-//Router Setup
-//If the request starts with /api/users/ direct it to the userRouter()
-app.use('/api/users', userRouter)
+app.use('/api/items', ensureLoggedIn, require('./routes/api/items.cjs'));
 
 // The following "catch all" route (note the *) is necessary
 // to return the index.html on all non-AJAX requests
-app.get('/*', function(req, res) {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-  });
+// Send the built and compiled React code to the browser
+app.get('/*', function (req, res) {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
-    console.log(`Express Train Running! Listening to yo business on port: ${PORT}`)
-})
+  console.log(`Express app running on port: ${PORT}`);
+});

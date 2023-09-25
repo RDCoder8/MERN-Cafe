@@ -62,7 +62,7 @@ code {
 }
 
 .scroll-y {
-  overflow-y: scroll;
+  overflow-y: auto;
 }
 
 .section-heading {
